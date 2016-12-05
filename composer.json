@@ -1,0 +1,47 @@
+{
+    "name": "itgalaxy/bin-check",
+    "description": "Check if a binary is working by checking its exit code",
+    "keywords": [
+        "binary",
+        "check",
+        "executable",
+        "test"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Itgalaxy",
+            "email": "info@itgalaxy.company"
+        }
+    ],
+    "require": {
+        "php": "^5.6 || ^7.0",
+        "webmozart/path-util": "~2.3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~5.7.0",
+        "phpunit/php-code-coverage": "~4.0.0",
+        "satooshi/php-coveralls": "~1.0.0"
+    },
+    "scripts": {
+        "phpunit": "phpunit",
+
+        "test": "@phpunit"
+    },
+    "autoload": {
+        "psr-4": {
+            "BinCheck\\": "src/"
+        }
+    },
+    "archive": {
+        "exclude": [
+            "!vendor",
+            "tests",
+            "*phpunit.xml*",
+            ".travis.yml",
+            "appveyor.yml",
+            "composer.phar"
+        ]
+    }
+}
