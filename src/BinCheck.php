@@ -1,26 +1,54 @@
 <?php
-namespace BinCheck;
+namespace Itgalaxy\BinCheck;
 
+use Itgalaxy\BinCheck\Exception\FileNotExecutableException;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\ProcessBuilder;
 use Webmozart\PathUtil\Path;
 
 class BinCheck
 {
-    public static function check($bin, $args = ['--help'])
-    {
-        $bin = Path::canonicalize($bin);
+    protected $bin = null;
 
+    protected $args = null;
+
+    public function __construct($bin, $args = ['--help'])
+    {
+        if (!is_string($bin)) {
+            throw new \InvalidArgumentException('Option `bin` should be string');
+        }
+
+        if (!is_array($args)) {
+            throw new \InvalidArgumentException('Option `args` should be array');
+        }
+
+        $this->bin = Path::canonicalize($bin);
+        $this->args = $args;
+    }
+
+    public function check()
+    {
+        $bin = $this->bin;
         $isExecutable = is_executable($bin);
 
         if (!$isExecutable) {
-            throw new \Exception(
-                'Couldn\'t execute the `' . $bin . '` binary. Make sure it has the right permissions.'
+            throw new FileNotExecutableException(
+                'Path `' . $bin . '` is not executable. Make sure it has the right permissions.'
             );
         }
 
-        exec($bin . ' ' . implode(' ', $args), $output, $returnVar);
+        $builder = new ProcessBuilder();
+        $builder->setPrefix($bin);
+        $process = $builder
+            ->setArguments($this->args)
+            ->getProcess();
 
-        if ($returnVar !== 0) {
-            throw new \Exception('The `' . $bin . '` binary doesn\'t seem to work correctly');
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            throw new ProcessFailedException($process);
         }
+
+        return $process;
     }
 }

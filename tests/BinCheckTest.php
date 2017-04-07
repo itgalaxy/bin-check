@@ -1,13 +1,16 @@
 <?php
-namespace BinCheck\Tests;
+namespace Itgalaxy\BinCheck\Tests;
 
-use BinCheck\BinCheck;
+use Itgalaxy\BinCheck\BinCheck;
+use Itgalaxy\BinCheck\Exception\FileNotExecutableException;
 use PHPUnit\Framework\TestCase;
+use SebastianBergmann\Comparator\ComparisonFailure;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 use Webmozart\PathUtil\Path;
 
 class BinCheckTest extends TestCase
 {
-    private $bin = [
+    protected $bin = [
         'darwin' => __DIR__ . '/fixtures/optipng-osx',
         'linux' => __DIR__ . '/fixtures/optipng-linux',
         'winnt' => __DIR__ . '/fixtures/optipng-winnt.exe',
@@ -19,12 +22,35 @@ class BinCheckTest extends TestCase
         ]
     ];
 
-    public function testBin()
+    public function testThrowErrorOnInvalidBinArgument()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Option `bin` should be string');
+
+        new BinCheck([]);
+    }
+
+    public function testThrowErrorOnInvalidArgsArgument()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Option `args` should be array');
+
         $platform = strtolower(PHP_OS);
 
-        $binCheck = new BinCheck();
-        $binCheck::check(Path::canonicalize($this->bin[$platform]));
+        new BinCheck($this->bin[$platform], 'foo');
+    }
+
+    public function testWorksCorrectly()
+    {
+        $exception = null;
+        $platform = strtolower(PHP_OS);
+
+        try {
+            $binCheck = new BinCheck($this->bin[$platform]);
+            $binCheck->check();
+        } catch (ComparisonFailure $exception) {}
+
+        $this->assertNull($exception, 'Unexpected ComparisonFailure');
     }
 
     public function testErrorIfRightsPermissionsAreNotSetCorrectly()
@@ -33,23 +59,20 @@ class BinCheckTest extends TestCase
 
         chmod($bin, 0444);
 
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage(
-            'Couldn\'t execute the `' . $bin . '` binary. Make sure it has the right permissions.'
-        );
+        $this->expectException(FileNotExecutableException::class);
 
-        $binCheck = new BinCheck();
-        $binCheck::check($bin);
+        $binCheck = new BinCheck($bin);
+        $binCheck->check();
     }
 
     public function testErrorIfBinaryDontWorkCorrectly()
     {
         $platform = strtolower(PHP_OS);
         $bin = Path::canonicalize($this->bin['corrupted'][$platform]);
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('The `' . $bin . '` binary doesn\'t seem to work correctly');
 
-        $binCheck = new BinCheck();
-        $binCheck::check($bin);
+        $this->expectException(ProcessFailedException::class);
+
+        $binCheck = new BinCheck($bin);
+        $binCheck->check();
     }
 }
